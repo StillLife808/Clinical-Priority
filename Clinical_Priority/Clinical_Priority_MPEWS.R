@@ -3,7 +3,7 @@ library("tidyverse")
 library("tibbletime")
 
 # set working directory
-setwd("/Users/michael/Clinical_Priority/data/OneDrive_1_2-15-2021")
+setwd("/Users/michael/data/OneDrive_1_2-15-2021")
 
 # read in csv files
 labs <- read_csv("labs_clean.csv") # look at

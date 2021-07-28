@@ -2,7 +2,7 @@
 library("tidyverse")
 
 # set working directory
-setwd("/Users/michael/Clinical_Priority/data/OneDrive_1_2-15-2021")
+setwd("/Users/michael/data/OneDrive_1_2-15-2021")
 
 # read in labs csv
 labs <- read_csv("labs_clean.csv")
@@ -136,39 +136,13 @@ calc_cot <- function(labs) {
   cot_labs_total <- cot_labs_total %>% 
     mutate(CoT_norm =(CoT / max_cot) * 100)
 }
-
-# ------------------------------------------------------------------------------
-#                 Change-over-time Score by Encounter Type
-# ------------------------------------------------------------------------------
-# calculate change over time by NEPH_VISIT_HOSPITAL
-cot_neph_hosp <- calc_cot(labs_neph_hosp)
-write_csv(cot_neph_hosp, "cot_labs_neph_hosp.csv")
-
-# calculate change over time by ICU_VISIT_HOSPITAL encounter
-cot_icu_hosp <- calc_cot(labs_icu_hosp)
-# write csv of cot
-write_csv(cot_icu_hosp, "cot_labs_icu_hosp.csv")
-
-# calculate change over time by NON_NEPH_NON_ICU_HOSPITAL encounter
-cot_non_neph_non_icu_hosp <- calc_cot(labs_non_neph_non_icu_hosp)
-# write csv of cot
-write_csv(cot_non_neph_non_icu_hosp, "cot_labs_non_neph_icu_hosp.csv")
-
-# calculate change over time by NON_NEPH_NON_ICU_OUTPATIENT encounter
-cot_non_neph_non_icu_out <- calc_cot(labs_non_neph_non_icu_out)
-# write csv of cot
-write_csv(cot_non_neph_non_icu_out, "cot_labs_non_neph_non_icu_out.csv")
-
-# calculate change over time by NEPH_OUTPATIENT encounter
-cot_neph_out <- calc_cot(labs_neph_out)
-# write csv of cot
-write_csv(cot_neph_out, "cot_labs_neph_out.csv")
 # ------------------------------------------------------------------------------
 #                 Random Time Sample
 # ------------------------------------------------------------------------------
 # Random sampling of timestamp
 set.seed(2)
 labs_random <- labs %>% 
+  filter(!is.na(EVENT_TS)) %>% 
   group_by(ENCRYPTED_PAT_MRN_ID) %>% 
   sample_n(1) %>% 
   select(ENCRYPTED_PAT_MRN_ID, EVENT_TS)
@@ -177,9 +151,42 @@ labs_random <- labs %>%
 labs_random <- labs_random %>% 
   rename(TS = EVENT_TS)
 
-# join the random timestampt to original labs dataframe
+# join the random timestamp to original labs dataframe
 labs <- left_join(labs, labs_random)
-# continue to line 15-46
+
+# create df with dates clos
+df1 <- labs %>% 
+  group_by(ENCRYPTED_PAT_MRN_ID, EVENT_NAME) %>% 
+  filter(EVENT_TS == max(EVENT_TS))
+
+# Finding the second most recent lab draw values
+# create df filtering out most recent lab draw date
+df2 <- labs %>% 
+  group_by(ENCRYPTED_PAT_MRN_ID, EVENT_NAME) %>% 
+  filter(EVENT_TS != max(EVENT_TS))
+# filter out only the most recent lab draws from df2
+df2 <- df2 %>% 
+  group_by(ENCRYPTED_PAT_MRN_ID, EVENT_NAME) %>% 
+  filter(EVENT_TS == max(EVENT_TS))
+
+# merge df1 and df2 to create df w/ labs draws from most recent date and next
+# most recent date
+labs_cot <- rbind(df1, df2)
+# filter out any lab value that does not have two results
+labs_cot <- labs_cot %>% 
+  group_by(ENCRYPTED_PAT_MRN_ID, EVENT_NAME) %>% 
+  filter(n() > 1)
+# just looking at the data
+labs_cot <- labs_cot %>% 
+  arrange(ENCRYPTED_PAT_MRN_ID, EVENT_NAME, EVENT_TS)
+# combine same lab type data on same day by finding mean
+labs_cot <- labs_cot %>% 
+  group_by(ENCRYPTED_PAT_MRN_ID, EVENT_NAME, EVENT_TS) %>% 
+  filter(RESULT_VALUE == mean(RESULT_VALUE))
+
+# add normalized lab values
+labs_cot <- labs_cot %>% 
+  mutate(RESULT_VALUE_NORM = (RESULT_VALUE - NORMAL_MEAN) / (NORMAL_HIGH - NORMAL_LOW))
 
 labs_cot_time_diff <- labs_cot %>%
   group_by(ENCRYPTED_PAT_MRN_ID, EVENT_NAME) %>%

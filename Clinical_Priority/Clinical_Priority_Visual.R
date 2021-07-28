@@ -272,23 +272,3 @@ outpatient_plot <- plot_log(labs_score,
                            c("gold2", "chartreuse2"))
 outpatient_plot
 ggsave("all_outpatient.pdf")
-
-# ------------------------------------------------------------------------------
-#                       K-Means Clustering
-# ------------------------------------------------------------------------------
-labs_score <- labs_score %>% 
-  filter(log_CoT != Inf,
-         log_CoT != -Inf,
-         log_acuity != -Inf)
-
-labs_kmeans <- labs_score %>% 
-  select(log_acuity, log_CoT) %>% 
-  filter(log_CoT != Inf,
-         log_CoT != -Inf)
-
-labs_kmeans <- labs_kmeans[c("log_CoT", "log_acuity")]
-
-km.out = kmeans(labs_kmeans,2,nstart=20)
-plot(labs_kmeans, col=(km.out$cluster+1), main="K-Means Clustering Results with K=2",
-     xlab="log(Degree of Change)", ylab = "log(Acuity)", pch=20, cex=1)
-

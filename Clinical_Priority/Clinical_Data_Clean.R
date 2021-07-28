@@ -111,38 +111,3 @@ labs_sample <- create_pt_df(labs, 2)
 # arrange by patient then lab name to view different labs by patient
 labs_sample <- labs_sample %>%
   arrange(ENCRYPTED_PAT_MRN_ID, EVENT_NAME)
-
-
-# ------------------------------------------------------------------------------
-#                           Exploring Data
-# ------------------------------------------------------------------------------
-# Testing to see how many patients only have one day of lab values
-labs_pt <- labs %>% 
-  filter(ENCRYPTED_PAT_MRN_ID ==  10440612021) %>% 
-  filter(EVENT_TS == max(EVENT_TS))
-
-labs_pt <- labs_pt %>% 
-  mutate(z_score = abs((RESULT_VALUE - NORMAL_MEAN) / ((NORMAL_HIGH - NORMAL_MEAN) / 2))) %>% 
-  select(ENCRYPTED_PAT_MRN_ID, EVENT_NAME, RESULT_VALUE, RESULT_UNIT, NORMAL_LOW, NORMAL_HIGH, NORMAL_MEAN, z_score)
-
-labs_ref <- labs %>% 
-  filter(is.na(NORMAL_LOW) == F)
-
-labs_ref_unique <- matrix(unique(labs_ref$EVENT_NAME), ncol=1)
-labs_ref_unique <- data.frame(labs_ref_unique)
-
-write_csv(labs_ref_unique, "Labs_With_Ref_Range.csv")
-write_csv(labs_ref, "labs_clean_ref.csv")
-
-
-
-
-labs_look <- labs %>% 
-  filter(ENCRYPTED_PAT_ENC_CSN_ID == unique(ENCRYPTED_PAT_ENC_CSN_ID))
-
-labs_filtered_mpews <- right_join(labs_filtered, mpews, by=c("ENCRYPTED_PAT_MRN_ID", "ENCRYPTED_PAT_ENC_CSN_ID"))
-
-# ------------------------------------------------------------------------------
-#               Checking for Multiple Encounter Types per Encounter
-# ------------------------------------------------------------------------------
-
